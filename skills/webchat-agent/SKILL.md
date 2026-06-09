@@ -67,9 +67,15 @@ claude mcp add webchat-agent -e BRIDGE_PORT=8787 -- npx -y github:whitefoxx/webc
   `click_by_text`, `type_into`, `scroll_page`, `wait_for_selector`, `close_tab`;
   inspect/extract: `find_structured_data`, `list_network` / `read_network` /
   `find_in_network`, `get_a11y_tree`, `query_dom`, `get_dom_outline`, `eval_js`;
-  `find_adapters`, `install_adapter`; bookmarks / history / reading-list.
+  bookmarks / history / reading-list.
 - **Installed site adapters** (`<site>__<command>`, e.g. `xiaohongshu__feed`):
   deterministic extractors for sites the user added. Read each one's args from `tools/list`.
+- **Marketplace adapters** (not installed yet): `find_adapters {query}` to search;
+  **`load_adapter {site, name}`** to load one into THIS session (no install, gone on
+  restart) — it returns the adapter's arg schema and `<site>__<name>` becomes callable
+  immediately; `install_adapter {site, name}` to PERSIST a high-frequency one. Prefer
+  `load_adapter` for one-off use (installed adapters sit in the tool list every call =
+  tokens; install only the ones the user uses a lot).
 - **Explore controls**: `explore_start` / `explore_stop` — open/close a recording tab so
   the explore-only tools work, for authoring a NEW adapter.
 - **Manage the extension** (the same things the user does in the UI):
@@ -90,6 +96,10 @@ claude mcp add webchat-agent -e BRIDGE_PORT=8787 -- npx -y github:whitefoxx/webc
   → `generic__get_page_text` / `find_structured_data`.
 - **Extract structured data** → prefer an installed `<site>__…` adapter; else
   `find_structured_data` → network → DOM.
+- **Use a marketplace adapter you don't have installed** → `find_adapters {query}` →
+  `load_adapter {site, name}` (returns its args; no install, no confirm) → call
+  `<site>__<name>(args)`. Reach for `install_adapter` only when the user will use it
+  often. A WRITE adapter still asks for confirmation when it runs, not when loaded.
 - **Operate a page** → `generic__get_interactives` for refs → `click` / `type_into` /
   `scroll_page`, with `wait_for_selector` between steps.
 - **Author a new adapter** → load the **webchat-adapter-author** skill and run its loop:

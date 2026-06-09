@@ -42,6 +42,19 @@ const SYNTHETIC = [
     description: 'Stop the active explore session and close its tab.',
     inputSchema: { type: 'object', properties: {} },
   },
+  {
+    name: 'load_adapter',
+    description:
+      'Temporarily load a marketplace adapter into THIS session (no install, gone on restart): fetch + sha256-verify + register, then `<site>__<name>` is callable like an installed tool (it appears in tools/list after this). Use find_adapters to get site/name. Prefer this over install_adapter for one-off use — installed adapters sit in the tool list on every request (tokens); install only the high-frequency ones. Returns the adapter args. Loading needs no confirm; a WRITE adapter confirms when it runs.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        site: { type: 'string', description: 'adapter site (from find_adapters)' },
+        name: { type: 'string', description: 'adapter name (from find_adapters)' },
+      },
+      required: ['site', 'name'],
+    },
+  },
   // ── in-extension operations (handled in the extension, not registry adapters) ──
   {
     name: 'create_workflow',
