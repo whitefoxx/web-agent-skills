@@ -146,7 +146,7 @@ http.listen(PORT, '127.0.0.1', () => {
   console.error(
     `[bridge] listening on http://127.0.0.1:${PORT}  (ws + GET /ping /status /tools, POST /command)`,
   );
-  console.error('[bridge] enable 外部控制 in the extension (same port) to connect.');
+  console.error('[bridge] enable 外部接入 in the extension (same port) to connect.');
 });
 
 // ───────── MCP server (stdio) — editors connect here ─────────
