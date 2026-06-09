@@ -1,6 +1,6 @@
 ---
 name: webchat-agent
-description: Use to drive the user's real, logged-in Chrome through the WebChat Agent browser extension — open pages, read/extract content, click/type/scroll, manage tabs, run installed site adapters, and author new adapters via explore. Covers starting the local bridge yourself and talking to it over plain HTTP (curl) — no MCP setup needed. Reach for this on any "use my browser", "read this site while I'm logged in", "scrape/automate this page", or "make a tool for site X" request.
+description: Use to drive the user's real, logged-in Chrome through the WebChat Agent browser extension — open pages, read/extract content, click/type/scroll, manage tabs, run installed site adapters, author new adapters via explore, and manage the extension itself (workflows, shortcuts, long-term memory, LLM model). Covers starting the local bridge yourself and talking to it over plain HTTP (curl) — no MCP setup needed. Reach for this on any "use my browser", "read this site while I'm logged in", "scrape/automate this page", "make a tool for site X", or "save this as a workflow/shortcut/memory" request.
 ---
 
 # webchat-agent
@@ -19,18 +19,22 @@ one switch in the extension.
 2. **User enables the bridge** — extension side panel → menu → **外部接入** → set that
    port → **启用**. You can't do this (it's a browser UI toggle); ask the user to, if
    step 4 shows not-connected.
-3. **Start the bridge** and leave it running in the background:
+3. **Start the bridge** in the background and **leave it running**:
    ```bash
-   BRIDGE_PORT=8787 npx -y github:whitefoxx/webchat-agent-skills
+   BRIDGE_PORT=8787 npx -y github:whitefoxx/webchat-agent-skills &
    # reliable alternative — clone once, then run from the repo:
    #   git clone https://github.com/whitefoxx/webchat-agent-skills
    #   cd webchat-agent-skills && npm install && BRIDGE_PORT=8787 npm start
    ```
-4. **Verify** the round trip:
+   ⚠️ The **first** `npx` run clones + `npm install`s (~10–30s) before it listens;
+   later runs are cached and fast. **Don't assume it's up immediately** — poll (next step).
+4. **Wait for it, then verify** (poll, don't just `sleep`):
    ```bash
+   until curl -s localhost:8787/status >/dev/null 2>&1; do sleep 2; done
    curl -s localhost:8787/status     # {"ok":true,"connected":true,"tools":N}
    ```
-   `connected:false` → the extension isn't enabled on this port (step 2).
+   - `connected:false` → the extension isn't enabled on this port (step 2).
+   - `curl` exit code **7** = nothing listening yet → the bridge is still starting; keep polling.
 
 ## 2. Use it — HTTP (the simple default, no MCP)
 
@@ -54,10 +58,9 @@ then use your editor's normal `tools/list` / `tools/call`:
 # Claude Code:
 claude mcp add webchat-agent -e BRIDGE_PORT=8787 -- npx -y github:whitefoxx/webchat-agent-skills
 ```
-(Cursor / Codex: add the same `command` + `env` to their MCP server config.) The bridge
-speaks MCP over stdio; HTTP stays available either way.
+(Cursor / Codex: add the same `command` + `env` to their MCP server config.)
 
-## Tool surface (read `tools/list` for the live set)
+## Tool surface (read `tools/list` / `/tools` for the live set)
 
 - **Browser primitives** (`generic__…`): `open_url`, `list_tabs`, `get_active_tab`,
   `get_page_text`, `get_html`, `get_interactives`, `screenshot`; act: `click`,
@@ -69,6 +72,17 @@ speaks MCP over stdio; HTTP stays available either way.
   deterministic extractors for sites the user added. Read each one's args from `tools/list`.
 - **Explore controls**: `explore_start` / `explore_stop` — open/close a recording tab so
   the explore-only tools work, for authoring a NEW adapter.
+- **Manage the extension** (the same things the user does in the UI):
+  - **Workflows**: `create_workflow` `{name, description, steps:[{tool,args,for_each?}]}`
+    (re-use a name to update; later steps may use `{{N.field}}` / `{{prev}}` / `{{item.field}}`),
+    `list_workflows`.
+  - **Shortcuts**: `create_shortcut` `{label, text}` (re-use a label to update),
+    `list_shortcuts`.
+  - **Memory**: `save_memory` `{fact}`, `list_memories`, `delete_memory` `{id}`.
+  - **LLM**: `get_llm_config` (profiles + slots; **keys redacted**), `set_llm`
+    `{profile_id, model?, as_primary?}` — switch the active model or change a profile's
+    model. **API keys are never accepted over the bridge** — adding a new backend with
+    its key stays a UI action.
 
 ## Common tasks
 
@@ -81,13 +95,15 @@ speaks MCP over stdio; HTTP stays available either way.
 - **Author a new adapter** → load the **webchat-adapter-author** skill and run its loop:
   `explore_start` → recon → strategy note → `eval_js` → write the `cli({…})` source →
   verify → `generic__install_adapter`.
+- **Save it for the user** → turn a repeatable sequence into a `create_workflow`; save a
+  reusable prompt with `create_shortcut`; remember a preference with `save_memory`.
 
 ## Notes & boundaries
 
-- **Writes** (post / comment / like, and `explore_start`) run only if the user ticked
-  **允许外部写操作** in 外部接入.
+- **Writes** (post / comment / like; `explore_start`; `create_*` / `save_memory` /
+  `delete_memory` / `set_llm`) run only if the user ticked **允许外部写操作** in 外部接入.
+  Reads (`list_*`, `get_llm_config`, page reads) always work.
 - **Local-only** (`127.0.0.1`). Run **one** bridge instance — the extension dials a
   single port.
-- **Not bridge tools (yet):** the extension's LLM backend, long-term memory, workflows,
-  and shortcuts are set in the extension UI (or by its own side-panel agent). Adapters
-  you can author here via explore.
+- **LLM API keys** are never exposed or accepted over the bridge — read is redacted, and
+  adding a backend with a key is a UI action (keeps keys out of the agent's context).

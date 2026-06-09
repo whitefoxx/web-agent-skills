@@ -42,7 +42,110 @@ const SYNTHETIC = [
     description: 'Stop the active explore session and close its tab.',
     inputSchema: { type: 'object', properties: {} },
   },
+  // ── in-extension operations (handled in the extension, not registry adapters) ──
+  {
+    name: 'create_workflow',
+    description:
+      'Save a reusable workflow (a named chain of tool calls) into the extension. Re-using a name updates it. Later steps may reference earlier results via {{N.field}} / {{prev}}; set for_each to a context path to fan out (use {{item.field}}).',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'workflow name (re-use to update)' },
+        description: { type: 'string', description: 'one-line summary shown to the user' },
+        steps: {
+          type: 'array',
+          description: 'ordered steps',
+          items: {
+            type: 'object',
+            properties: {
+              tool: { type: 'string', description: 'tool id, e.g. hackernews__top' },
+              args: { type: 'object', description: 'arg key/values; may use {{...}} templates' },
+              for_each: { type: 'string', description: 'optional: context path to iterate' },
+            },
+            required: ['tool'],
+          },
+        },
+      },
+      required: ['name', 'description', 'steps'],
+    },
+  },
+  {
+    name: 'list_workflows',
+    description: 'List saved workflows (name, description, tool chain).',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'create_shortcut',
+    description:
+      'Save a reusable prompt shortcut the user can insert with /. Re-using a label updates it. Text may embed ⟦wf:NAME⟧ / ⟦tool:ID⟧ tokens to carry a workflow/tool.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        label: { type: 'string', description: 'short name (user searches it with /)' },
+        text: { type: 'string', description: 'the prompt text' },
+      },
+      required: ['label', 'text'],
+    },
+  },
+  {
+    name: 'list_shortcuts',
+    description: 'List saved shortcuts (label + text/tool).',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'save_memory',
+    description:
+      "Save one long-term fact/preference about the user; it's injected into every future session's context.",
+    inputSchema: {
+      type: 'object',
+      properties: { fact: { type: 'string', description: 'a short fact/preference' } },
+      required: ['fact'],
+    },
+  },
+  {
+    name: 'list_memories',
+    description: 'List saved long-term memory facts (id + text).',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'delete_memory',
+    description: 'Delete a memory fact by id (from list_memories).',
+    inputSchema: {
+      type: 'object',
+      properties: { id: { type: 'string' } },
+      required: ['id'],
+    },
+  },
+  {
+    name: 'get_llm_config',
+    description:
+      'Read the extension LLM setup: profiles (id, label, provider, baseUrl, model, hasKey) + capability slots (primary/vision/image). API keys are NEVER returned.',
+    inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'set_llm',
+    description:
+      "Switch the active LLM or change an existing profile's model, by profile id (from get_llm_config). Does NOT accept API keys — add a new backend (with its key) in the extension UI.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        profile_id: { type: 'string', description: 'profile id from get_llm_config' },
+        model: { type: 'string', description: "optional: new model name for that profile" },
+        as_primary: { type: 'boolean', description: 'optional: make it the primary model' },
+      },
+      required: ['profile_id'],
+    },
+  },
 ];
+
+/** Synthetic tools in OpenAI-tool shape, so HTTP /tools lists them alongside the
+ * extension catalog (MCP tools/list maps them separately, below). */
+function syntheticAsOpenAi() {
+  return SYNTHETIC.map((t) => ({
+    type: 'function',
+    function: { name: t.name, description: t.description, parameters: t.inputSchema },
+  }));
+}
 
 /** The single connected extension socket. */
 let extWs = null;
@@ -79,7 +182,8 @@ const http = createServer(async (req, res) => {
   if (req.method === 'GET' && url === '/ping') return json(200, { ok: true });
   if (req.method === 'GET' && url === '/status')
     return json(200, { ok: true, connected, port: PORT, tools: catalog.length });
-  if (req.method === 'GET' && url === '/tools') return json(200, { ok: true, tools: catalog });
+  if (req.method === 'GET' && url === '/tools')
+    return json(200, { ok: true, tools: [...syntheticAsOpenAi(), ...catalog] });
   if (req.method === 'POST' && url === '/command') {
     let body = '';
     for await (const chunk of req) body += chunk;
