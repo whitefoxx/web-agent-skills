@@ -1,0 +1,17 @@
+{
+  "name": "webchat-agent-bridge",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Local bridge daemon: editor/CLI ⇄ WebChat Agent extension (roadmap T7).",
+  "bin": {
+    "webchat-agent-bridge": "./server.mjs"
+  },
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "ws": "^8.18.0"
+  }
+}
