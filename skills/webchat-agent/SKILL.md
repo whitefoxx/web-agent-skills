@@ -92,6 +92,11 @@ claude mcp add webchat-agent -e BRIDGE_PORT=8787 -- npx -y github:whitefoxx/webc
 
 ## Common tasks
 
+- **Load the user's saved preferences first** → call `list_memories` once at the start of a
+  browsing session and honor what's there. The extension stores long-term memories
+  (preferences/facts) that its in-panel agent auto-injects, but driving it over the bridge does
+  NOT auto-load them into your context — so read them yourself up front (e.g. a stated language,
+  output style, or "always do X on site Y").
 - **Read a logged-in page** → `generic__open_url` (or reuse a tab via `generic__list_tabs`)
   → `generic__get_page_text` / `find_structured_data`.
 - **Extract structured data** → prefer an installed `<site>__…` adapter; else
