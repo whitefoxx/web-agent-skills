@@ -130,6 +130,22 @@ const SYNTHETIC = [
     },
   },
   {
+    name: 'notes',
+    description:
+      "CRUD the user's notebook (markdown notes). UNLIKE memory, notes are NOT injected into context — read/write them only when the user explicitly asks. action: create(content, title?) / list / search(query) / get(id) / update(id, title?/content?) / delete(id). create/update/delete respect the extension's write switch; list/search/get always work.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', description: 'create | list | search | get | update | delete' },
+        title: { type: 'string', description: 'note title (create/update; defaults to first line)' },
+        content: { type: 'string', description: 'markdown body (required for create)' },
+        id: { type: 'string', description: 'note id from list/search (get/update/delete)' },
+        query: { type: 'string', description: 'search keyword (search)' },
+      },
+      required: ['action'],
+    },
+  },
+  {
     name: 'get_llm_config',
     description:
       'Read the extension LLM setup: profiles (id, label, provider, baseUrl, model, hasKey) + capability slots (primary/vision/image). API keys are NEVER returned.',
