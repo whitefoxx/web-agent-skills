@@ -62,6 +62,19 @@ const SYNTHETIC = [
       required: ['site', 'name'],
     },
   },
+  {
+    name: 'contribute_adapter',
+    description:
+      "Contribute an INSTALLED adapter back to the public marketplace: returns a pre-filled GitHub issue URL containing the adapter's source for the maintainer to audit + merge (+ rotate sha). Use after you authored or healed an adapter and it works. Show the returned `url` to the user — they review + submit on GitHub (privacy: it carries only the source, no scraped data). If `pasteSource` is returned, the source was too long to inline — give it to the user to paste into the issue.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        site: { type: 'string', description: 'installed adapter site' },
+        name: { type: 'string', description: 'installed adapter name' },
+      },
+      required: ['site', 'name'],
+    },
+  },
   // ── in-extension operations (handled in the extension, not registry adapters) ──
   {
     name: 'create_workflow',
