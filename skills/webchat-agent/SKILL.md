@@ -5,10 +5,20 @@ description: Use to drive the user's real, logged-in Chrome through the WebChat 
 
 # webchat-agent
 
+**The user's logged-in browser, as your tools.** You (a stronger external agent) drive
+the user's real, logged-in Chrome, locally — deterministic site adapters for fast/cheap/
+reliable extraction, their real sessions (no re-auth), local-first. Beats raw
+computer-use on all three.
+
 Drive the user's **real, logged-in Chrome** through the **WebChat Agent** extension.
 You start a tiny local bridge and talk to it over **plain HTTP (`curl`)** — no MCP
 config required. Everything runs on the user's machine against their actual browser
 session (their cookies/logins); local-only, nothing leaves the box.
+
+**If your client speaks MCP** (Claude Code / Cursor), you also get, besides `tools/list`:
+**prompts** — `author-adapter`, `find-or-load-adapter`, `summarize-tabs` (slash-commands);
+**resources** — `webchat://server-info` (read it first), `webchat://adapters`; and
+**`contribute_adapter`** to submit an adapter you authored/healed back to the marketplace.
 
 ## 1. Connect (once per session)
 
