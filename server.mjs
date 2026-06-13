@@ -31,7 +31,11 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 
 const PORT = Number(process.env.BRIDGE_PORT || 8787);
-const CALL_TIMEOUT_MS = 60_000;
+// How long the daemon waits for the extension to answer a /command before giving
+// up. Default bumped 60s → 180s (+ env override) so heavy pages and long-video
+// transcripts aren't cut off — the SW keepalive pings every ~20s, so the worker
+// stays alive well past this. Set BRIDGE_CALL_TIMEOUT_MS to tune.
+const CALL_TIMEOUT_MS = Number(process.env.BRIDGE_CALL_TIMEOUT_MS) || 180_000;
 
 /** Synthetic control tools (not in the extension registry). */
 const SYNTHETIC = [
