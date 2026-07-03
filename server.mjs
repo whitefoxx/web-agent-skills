@@ -58,6 +58,35 @@ const SYNTHETIC = [
     inputSchema: { type: 'object', properties: {} },
   },
   {
+    name: 'await_user_action',
+    description:
+      "Human handoff: ask the USER to do a step in their browser only a human can (log in, solve a captcha, make a judgment call), then resume. The extension focuses the tab, shows a card with your `objective`, fires a desktop notification, and BLOCKS this call until the user finishes (or skips / times out after 5min). Requires the user's WebChat side panel to be OPEN — otherwise it returns an error telling you to ask them to open it. Optional `wait_for_selector` (+ `wait_until`) auto-resumes the moment that element appears/disappears, so the user needn't click. Use this instead of failing on a login wall; do NOT use it for steps you can do yourself.",
+    inputSchema: {
+      type: 'object',
+      properties: {
+        objective: {
+          type: 'string',
+          description: 'what you need the user to do (user-facing, specific)',
+        },
+        tab_id: {
+          type: 'number',
+          description: 'tab to bring to the foreground for them (from open_url); omit = no switch',
+        },
+        wait_for_selector: {
+          type: 'string',
+          description:
+            'optional CSS selector; when it appears (see wait_until) the takeover auto-resumes with no manual click. Needs tab_id.',
+        },
+        wait_until: {
+          type: 'string',
+          enum: ['appear', 'disappear'],
+          description: 'direction for wait_for_selector (default appear)',
+        },
+      },
+      required: ['objective'],
+    },
+  },
+  {
     name: 'load_adapter',
     description:
       'Temporarily load a marketplace adapter into THIS session (no install, gone on restart): fetch + sha256-verify + register, then `<site>__<name>` is callable like an installed tool (it appears in tools/list after this). Use find_adapters to get site/name. Prefer this over install_adapter for one-off use — installed adapters sit in the tool list on every request (tokens); install only the high-frequency ones. Returns the adapter args. Loading needs no confirm; a WRITE adapter confirms when it runs.',
@@ -213,6 +242,11 @@ let extInfo = null; // { client, version } from the extension's register (for /g
 const pending = new Map();
 let seq = 0;
 
+// Tools that legitimately block on a HUMAN for minutes: the daemon must wait past
+// the extension's 5-min takeover timeout (③a), not cut off at the default. Value
+// is a hair above TAKEOVER_TIMEOUT_MS (300s) so the extension resolves first.
+const LONG_CALL_TIMEOUT_MS = { await_user_action: 320_000 };
+
 function callExtension(tool, args) {
   return new Promise((resolve) => {
     if (!extWs || extWs.readyState !== extWs.OPEN) {
@@ -223,7 +257,7 @@ function callExtension(tool, args) {
     const timer = setTimeout(() => {
       pending.delete(id);
       resolve({ ok: false, error: 'timeout waiting for extension' });
-    }, CALL_TIMEOUT_MS);
+    }, LONG_CALL_TIMEOUT_MS[tool] || CALL_TIMEOUT_MS);
     pending.set(id, { resolve, timer });
     extWs.send(JSON.stringify({ type: 'call', id, tool, args: args ?? {} }));
   });
