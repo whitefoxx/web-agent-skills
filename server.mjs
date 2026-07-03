@@ -31,6 +31,10 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 
 const PORT = Number(process.env.BRIDGE_PORT || 8787);
+// Skill-contract version (⑫ two-layer skill): the SKILL.md shell passes its own
+// version to GET /guide; a mismatch means the installed skill is stale and the
+// guide tells the agent to update. Bump when the skill contract changes.
+const SKILL_VERSION = '2026-07-03';
 // How long the daemon waits for the extension to answer a /command before giving
 // up. Default bumped 60s → 180s (+ env override) so heavy pages and long-video
 // transcripts aren't cut off — the SW keepalive pings every ~20s, so the worker
@@ -204,6 +208,7 @@ function syntheticAsOpenAi() {
 let extWs = null;
 /** Latest tool catalog the extension pushed (openAiToolsFromRegistry output). */
 let catalog = [];
+let extInfo = null; // { client, version } from the extension's register (for /guide)
 /** id → { resolve, timer } for in-flight calls awaiting a `result`. */
 const pending = new Map();
 let seq = 0;
@@ -225,6 +230,61 @@ function callExtension(tool, args) {
 }
 
 // ───────── HTTP (health + testing) ─────────
+/** ⑫ Two-layer skill: the live state + directives the SKILL.md shell fetches
+ * (GET /guide) so the agent always works from CURRENT truth — connection, ext
+ * version, installed adapters, how-to-drive, and a version handshake that flags
+ * a stale installed skill. Returns structured fields + a ready-to-read `guide`. */
+function buildGuide(connected, skillVer) {
+  const siteAdapters = catalog
+    .map((t) => t?.function?.name || t?.name || '')
+    .filter((n) => n && n.includes('__') && !n.startsWith('generic__'));
+  const upToDate = !skillVer || skillVer === SKILL_VERSION;
+  const L = [];
+  L.push('# webchat-agent — live state(从这里开始)', '');
+  if (connected) {
+    L.push(
+      `- 扩展**已连接**(${extInfo?.client || 'ext'}${extInfo?.version ? ' v' + extInfo.version : ''})。`,
+    );
+  } else {
+    L.push(
+      `- 扩展**未连接**。让用户在扩展侧边栏 → 菜单 → 外部接入 → 端口 ${PORT} → 启用(这是浏览器 UI 开关,你点不了)。`,
+    );
+  }
+  L.push(`- 工具:${syntheticAsOpenAi().length} 个控制工具 + ${catalog.length} 个来自扩展。`);
+  L.push(
+    siteAdapters.length
+      ? `- 已装站点 adapter(${siteAdapters.length}):${siteAdapters.slice(0, 40).join(', ')}${siteAdapters.length > 40 ? ' …' : ''}。`
+      : '- 暂无已装站点 adapter —— 用 `find_adapters` 找、`load_adapter` 临时加载(一次性)或 `install_adapter` 安装。',
+  );
+  L.push('', '## 怎么驱动');
+  L.push(
+    `- 所有工具走 HTTP:\`curl -s http://127.0.0.1:${PORT}/command -d '{"tool":"<名>","args":{...}}'\`(返回 {ok,result})。`,
+    '- 随时列全部工具:`GET /tools`;本指南(含当前状态):`GET /guide`。',
+    '- 通用工具:open_url / get_page_text(可 format:"markdown")/ get_interactives / click / type_into / scroll_page …;写操作会弹用户确认。',
+    '- 没有现成 adapter?`find_adapters "<站点/任务>"`(支持中英别名)→ `load_adapter` 或 `install_adapter`。',
+    '- 造新 adapter:`explore_start` → 感知工具(get_a11y_tree / find_structured_data / eval_js / find_in_dom …)探明数据源 → 合成 → `explore_stop`。',
+    '- 卡在登录/验证码:相关工具会让扩展弹「接手」卡给用户;等他完成再续。',
+  );
+  if (!upToDate) {
+    L.push(
+      '',
+      '## ⚠️ 你的 skill 过期了',
+      `本地 skill 声明版本 \`${skillVer}\`,但 bridge 是 \`${SKILL_VERSION}\`。请更新:\`npx skills add whitefoxx/webchat-agent-skills -g\`。在那之前,**以本指南为准**(它是当前真相)。`,
+    );
+  }
+  return {
+    ok: true,
+    connected,
+    extension: extInfo,
+    skillVersion: SKILL_VERSION,
+    skillVersionSeen: skillVer || null,
+    upToDate,
+    tools: { control: syntheticAsOpenAi().length, extension: catalog.length },
+    adapters: siteAdapters,
+    guide: L.join('\n'),
+  };
+}
+
 const http = createServer(async (req, res) => {
   const url = (req.url || '/').split('?')[0];
   const json = (code, obj) => {
@@ -237,6 +297,11 @@ const http = createServer(async (req, res) => {
     return json(200, { ok: true, connected, port: PORT, tools: catalog.length });
   if (req.method === 'GET' && url === '/tools')
     return json(200, { ok: true, tools: [...syntheticAsOpenAi(), ...catalog] });
+  if (req.method === 'GET' && url === '/guide') {
+    const skillVer =
+      new URL(req.url, `http://127.0.0.1:${PORT}`).searchParams.get('skill-version') || '';
+    return json(200, buildGuide(connected, skillVer));
+  }
   if (req.method === 'POST' && url === '/command') {
     let body = '';
     for await (const chunk of req) body += chunk;
@@ -271,6 +336,7 @@ wss.on('connection', (ws) => {
         }
       }
       extWs = ws;
+      extInfo = { client: m.client || 'unknown', version: m.version || null };
       console.error(`[bridge] extension registered: ${m.client} ${m.version || ''}`);
     } else if (m.type === 'catalog') {
       catalog = Array.isArray(m.tools) ? m.tools : [];
@@ -288,6 +354,7 @@ wss.on('connection', (ws) => {
   ws.on('close', () => {
     if (extWs === ws) {
       extWs = null;
+      extInfo = null;
       catalog = [];
       // Fail in-flight calls fast instead of letting each hit CALL_TIMEOUT_MS.
       for (const [, p] of pending) {
@@ -301,7 +368,7 @@ wss.on('connection', (ws) => {
 
 http.listen(PORT, '127.0.0.1', () => {
   console.error(
-    `[bridge] listening on http://127.0.0.1:${PORT}  (ws + GET /ping /status /tools, POST /command)`,
+    `[bridge] listening on http://127.0.0.1:${PORT}  (ws + GET /ping /status /tools /guide, POST /command)`,
   );
   console.error('[bridge] enable 外部接入 in the extension (same port) to connect.');
 });

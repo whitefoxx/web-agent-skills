@@ -20,6 +20,17 @@ session (their cookies/logins); local-only, nothing leaves the box.
 **resources** — `webchat://server-info` (read it first), `webchat://adapters`; and
 **`contribute_adapter`** to submit an adapter you authored/healed back to the marketplace.
 
+> **Two-layer skill — read `/guide` first.** This file is a *static fallback reference*; the
+> live truth lives on the bridge. Once the bridge is up (§1), **run this first** and follow it:
+>
+> ```bash
+> curl -s "http://127.0.0.1:8787/guide?skill-version=2026-07-03"
+> ```
+>
+> Its `guide` (markdown) is the current state + directives — connection status, which adapters
+> are installed, available tools, how to drive — and it tells you (`upToDate:false`) if THIS
+> skill is stale, with the update command. When they disagree, **trust `/guide`.**
+
 ## 1. Connect (once per session)
 
 The bridge is a local daemon the extension dials into. You start it; the user flips
