@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * WebChat Agent bridge daemon (roadmap T7, transport A — see
+ * Web Agent bridge daemon (roadmap T7, transport A — see
  * docs/external-agent-control.md).
  *
  *   editor ──MCP(stdio)──▶ daemon ──WS──▶ extension ──▶ result back
@@ -60,7 +60,7 @@ const SYNTHETIC = [
   {
     name: 'await_user_action',
     description:
-      "Human handoff: ask the USER to do a step in their browser only a human can (log in, solve a captcha, make a judgment call), then resume. The extension focuses the tab, shows a card with your `objective`, fires a desktop notification, and BLOCKS this call until the user finishes (or skips / times out after 5min). Requires the user's WebChat side panel to be OPEN — otherwise it returns an error telling you to ask them to open it. Optional `wait_for_selector` (+ `wait_until`) auto-resumes the moment that element appears/disappears, so the user needn't click. Use this instead of failing on a login wall; do NOT use it for steps you can do yourself.",
+      "Human handoff: ask the USER to do a step in their browser only a human can (log in, solve a captcha, make a judgment call), then resume. The extension focuses the tab, shows a card with your `objective`, fires a desktop notification, and BLOCKS this call until the user finishes (or skips / times out after 5min). Requires the user's Web side panel to be OPEN — otherwise it returns an error telling you to ask them to open it. Optional `wait_for_selector` (+ `wait_until`) auto-resumes the moment that element appears/disappears, so the user needn't click. Use this instead of failing on a login wall; do NOT use it for steps you can do yourself.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -274,7 +274,7 @@ function buildGuide(connected, skillVer) {
     .filter((n) => n && n.includes('__') && !n.startsWith('generic__'));
   const upToDate = !skillVer || skillVer === SKILL_VERSION;
   const L = [];
-  L.push('# webchat-agent — live state(从这里开始)', '');
+  L.push('# web-agent — live state(从这里开始)', '');
   if (connected) {
     L.push(
       `- 扩展**已连接**(${extInfo?.client || 'ext'}${extInfo?.version ? ' v' + extInfo.version : ''})。`,
@@ -303,7 +303,7 @@ function buildGuide(connected, skillVer) {
     L.push(
       '',
       '## ⚠️ 你的 skill 过期了',
-      `本地 skill 声明版本 \`${skillVer}\`,但 bridge 是 \`${SKILL_VERSION}\`。请更新:\`npx skills add whitefoxx/webchat-agent-skills -g\`。在那之前,**以本指南为准**(它是当前真相)。`,
+      `本地 skill 声明版本 \`${skillVer}\`,但 bridge 是 \`${SKILL_VERSION}\`。请更新:\`npx skills add whitefoxx/web-agent-skills -g\`。在那之前,**以本指南为准**(它是当前真相)。`,
     );
   }
   return {
@@ -414,7 +414,7 @@ http.listen(PORT, '127.0.0.1', () => {
 // makes the MCP integration feel first-class rather than a flat tool list (H2).
 
 const SERVER_INFO = [
-  "# WebChat Agent — the user's logged-in browser, as tools",
+  "# Web Agent — the user's logged-in browser, as tools",
   '',
   'You are connected to a Chrome extension that drives the user\'s REAL, logged-in',
   'browser, locally on their machine. This is the execution layer; you are the brain.',
@@ -438,7 +438,7 @@ const SERVER_INFO = [
   '   click, click_by_text, type_into, scroll_page, screenshot, eval_js, query_dom.',
   '5. The extension also exposes the user\'s workflows, shortcuts, notes, and memory.',
   '',
-  '## Authoring discipline (also in the webchat-adapter-author skill)',
+  '## Authoring discipline (also in the web-adapter-author skill)',
   'Pick the most stable data source, in this order:',
   'PUBLIC_API > COOKIE_API > PAGE_FETCH > INTERCEPT > DOM_STATE > UI_SELECTOR.',
   'Write a one-line strategy note (source + contract + evidence) before any code.',
@@ -473,7 +473,7 @@ function promptText(name, args) {
   if (name === 'author-adapter') {
     const op = a.operation ? ` for the operation "${a.operation}"` : '';
     return [
-      `Build a deterministic WebChat Agent adapter for ${a.site || '<site>'}${op}.`,
+      `Build a deterministic Web Agent adapter for ${a.site || '<site>'}${op}.`,
       '',
       '1. explore_start({ task: "adapter for the above" }).',
       '2. open_url to the relevant page (the user is already logged in there).',
@@ -486,7 +486,7 @@ function promptText(name, args) {
       '   Robust selectors only; parameterize from args/URL, never hardcode ids.',
       '6. Verify it returns the expected rows; install it. explore_stop when done.',
       '',
-      'Read the resource webchat://server-info and the webchat-adapter-author skill first.',
+      'Read the resource web://server-info and the web-adapter-author skill first.',
     ].join('\n');
   }
   if (name === 'find-or-load-adapter') {
@@ -512,13 +512,13 @@ function promptText(name, args) {
 
 const RESOURCES = [
   {
-    uri: 'webchat://server-info',
-    name: 'WebChat Agent — what this is + how to drive it',
+    uri: 'web://server-info',
+    name: 'Web Agent — what this is + how to drive it',
     description: 'The value prop + the cheapest-path workflow for this logged-in-browser execution layer.',
     mimeType: 'text/markdown',
   },
   {
-    uri: 'webchat://adapters',
+    uri: 'web://adapters',
     name: 'Available tools & site adapters',
     description: 'The current catalog (site adapters + generic primitives + synthetic control tools).',
     mimeType: 'application/json',
@@ -527,7 +527,7 @@ const RESOURCES = [
 
 // ───────── MCP server (stdio) — editors connect here ─────────
 const mcp = new Server(
-  { name: 'webchat-agent', version: '0.1.0' },
+  { name: 'web-agent', version: '0.1.0' },
   { capabilities: { tools: {}, prompts: {}, resources: {} } },
 );
 mcp.setRequestHandler(ListToolsRequestSchema, async () => ({
@@ -556,10 +556,10 @@ mcp.setRequestHandler(GetPromptRequestSchema, async (req) => {
 mcp.setRequestHandler(ListResourcesRequestSchema, async () => ({ resources: RESOURCES }));
 mcp.setRequestHandler(ReadResourceRequestSchema, async (req) => {
   const uri = req.params.uri;
-  if (uri === 'webchat://server-info') {
+  if (uri === 'web://server-info') {
     return { contents: [{ uri, mimeType: 'text/markdown', text: SERVER_INFO }] };
   }
-  if (uri === 'webchat://adapters') {
+  if (uri === 'web://adapters') {
     const tools = [
       ...SYNTHETIC.map((t) => ({ name: t.name, description: t.description })),
       ...catalog.map((t) => ({ name: t.function.name, description: t.function.description })),

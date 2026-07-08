@@ -1,12 +1,12 @@
 ---
-name: webchat-agent
-description: Use to drive the user's real, logged-in Chrome through the WebChat Agent browser extension — open pages, read/extract content, click/type/scroll, manage tabs, run installed site adapters, author new adapters via explore, and manage the extension itself (workflows, shortcuts, long-term memory, LLM model). Covers starting the local bridge yourself and talking to it over plain HTTP (curl) — no MCP setup needed. Reach for this on any "use my browser", "read this site while I'm logged in", "scrape/automate this page", "make a tool for site X", or "save this as a workflow/shortcut/memory" request.
+name: web-agent
+description: Use to drive the user's real, logged-in Chrome through the Web Agent browser extension — open pages, read/extract content, click/type/scroll, manage tabs, run installed site adapters, author new adapters via explore, and manage the extension itself (workflows, shortcuts, long-term memory, LLM model). Covers starting the local bridge yourself and talking to it over plain HTTP (curl) — no MCP setup needed. Reach for this on any "use my browser", "read this site while I'm logged in", "scrape/automate this page", "make a tool for site X", or "save this as a workflow/shortcut/memory" request.
 ---
 
-# webchat-agent
+# web-agent
 
 **The user's logged-in browser, as your tools.** Drive the user's real, logged-in
-Chrome through the **WebChat Agent** extension — locally, over plain HTTP (`curl`),
+Chrome through the **Web Agent** extension — locally, over plain HTTP (`curl`),
 no MCP setup required. Deterministic site adapters + their real sessions (no re-auth),
 local-first. Read/extract pages, click/type/scroll, run installed site adapters, author
 new ones (explore), and manage the extension (workflows / shortcuts / memory / LLM).
@@ -34,9 +34,9 @@ switch in the extension.
 2. **Start the bridge** in the background and leave it running. The **first** `npx` run
    clones + `npm install`s (~10–30s) before it listens — don't assume it's up; poll (step 3):
    ```bash
-   BRIDGE_PORT=8787 npx -y github:whitefoxx/webchat-agent-skills &
-   # reliable alternative: git clone https://github.com/whitefoxx/webchat-agent-skills
-   #   && cd webchat-agent-skills && npm install && BRIDGE_PORT=8787 npm start
+   BRIDGE_PORT=8787 npx -y github:whitefoxx/web-agent-skills &
+   # reliable alternative: git clone https://github.com/whitefoxx/web-agent-skills
+   #   && cd web-agent-skills && npm install && BRIDGE_PORT=8787 npm start
    ```
 3. **Wait, then verify** (poll — don't just `sleep`):
    ```bash
@@ -62,7 +62,7 @@ switch in the extension.
 
 Marketplace adapters you don't have yet: `find_adapters {query}` → `load_adapter {site,name}`
 (temporary, no install) → call `<site>__<name>`. Authoring a new adapter: load the
-**webchat-adapter-author** skill and run its `explore_start` → recon → `eval_js` →
+**web-adapter-author** skill and run its `explore_start` → recon → `eval_js` →
 `synthesize_adapter` loop. Hit a login wall / captcha / a step only the user can do?
 `await_user_action {objective, tab_id}` hands off to the user and resumes.
 
@@ -71,12 +71,12 @@ Marketplace adapters you don't have yet: `find_adapters {query}` → `load_adapt
 Prefer first-class tool calls over `curl`? Register the bridge as an MCP server once:
 
 ```bash
-claude mcp add webchat-agent -e BRIDGE_PORT=8787 -- npx -y github:whitefoxx/webchat-agent-skills
+claude mcp add web-agent -e BRIDGE_PORT=8787 -- npx -y github:whitefoxx/web-agent-skills
 ```
 
 (Cursor / Codex: add the same `command` + `env` to their MCP server config.) You then also
 get **prompts** (`author-adapter`, `find-or-load-adapter`, `summarize-tabs`) and **resources**
-(`webchat://server-info` — read it first, `webchat://adapters`).
+(`web://server-info` — read it first, `web://adapters`).
 
 ## Boundaries
 

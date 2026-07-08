@@ -1,16 +1,16 @@
 ---
-name: webchat-adapter-author
-description: Use when authoring a WebChat Agent adapter for a new site (or a new command) by driving the user's logged-in Chrome through the webchat-agent MCP bridge. Guides recon → strategy note → develop+test extraction with eval_js → write the cli({}) adapter → verify → install. For ad-hoc browsing (no adapter) just call the webchat-agent tools directly.
+name: web-adapter-author
+description: Use when authoring a Web Agent adapter for a new site (or a new command) by driving the user's logged-in Chrome through the web-agent MCP bridge. Guides recon → strategy note → develop+test extraction with eval_js → write the cli({}) adapter → verify → install. For ad-hoc browsing (no adapter) just call the web-agent tools directly.
 ---
 
-# webchat-adapter-author
+# web-adapter-author
 
-You author a **WebChat Agent adapter** (an opencli-style `cli({…})` command) by
-driving the user's real, logged-in Chrome through the **webchat-agent MCP server**
+You author a **Web Agent adapter** (an opencli-style `cli({…})` command) by
+driving the user's real, logged-in Chrome through the **web-agent MCP server**
 (the `bridge/`). Goal: from zero to an adapter that re-extracts the data
 deterministically (no LLM at replay).
 
-Prereqs: the bridge is connected — see the **webchat-agent** skill (start the bridge,
+Prereqs: the bridge is connected — see the **web-agent** skill (start the bridge,
 enable 外部接入 on its port, `curl -s localhost:<port>/status` shows
 `connected:true`). Then the tools (browser primitives + `explore_start` /
 `explore_stop` + the installed site adapters) are reachable via `curl

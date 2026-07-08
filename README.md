@@ -1,24 +1,24 @@
-# webchat-agent-skills
+# web-agent-skills
 
 The local **bridge** + agent **skills** that let a coding agent (Claude Code / Codex /
-Cursor / …) drive your real, logged-in Chrome through the **WebChat Agent** browser
+Cursor / …) drive your real, logged-in Chrome through the **Web Agent** browser
 extension — run its tools/adapters, operate pages, and even **drive `explore` to author
 new adapters**. Local-only (binds `127.0.0.1`).
 
 ## Quick start
 
 ```bash
-npx skills add whitefoxx/webchat-agent-skills -g     # install the skills into your agent(s)
+npx skills add whitefoxx/web-agent-skills -g     # install the skills into your agent(s)
 ```
 
 Then: in the extension → side panel → **外部接入** → set a port → **启用**. Now ask your
-agent to use your browser — the **webchat-agent** skill tells it how to start the bridge
+agent to use your browser — the **web-agent** skill tells it how to start the bridge
 and drive it (over plain HTTP `curl`, no MCP config). See [`skills/`](./skills).
 
 ## Run the bridge yourself
 
 ```bash
-npx -y github:whitefoxx/webchat-agent-skills          # BRIDGE_PORT=8787 by default
+npx -y github:whitefoxx/web-agent-skills          # BRIDGE_PORT=8787 by default
 # or from a clone:
 npm install && BRIDGE_PORT=8787 npm start             # ws + @modelcontextprotocol/sdk
 ```
@@ -40,7 +40,7 @@ curl -s localhost:8787/command -d '{"tool":"explore_start","args":{"task":"demo"
 **MCP (optional, for native tool calls):** register the bridge as an MCP server, e.g.
 
 ```bash
-claude mcp add webchat-agent -e BRIDGE_PORT=8787 -- npx -y github:whitefoxx/webchat-agent-skills
+claude mcp add web-agent -e BRIDGE_PORT=8787 -- npx -y github:whitefoxx/web-agent-skills
 ```
 
 `tools/list` shows the browser tools + installed adapters + `explore_start`/`explore_stop`;
@@ -49,8 +49,8 @@ claude mcp add webchat-agent -e BRIDGE_PORT=8787 -- npx -y github:whitefoxx/webc
 ## Skills
 
 `skills/` ships drop-in skills so the agent knows the workflow without you spelling it
-out — **`webchat-agent`** (connect + tool surface + common tasks) and
-**`webchat-adapter-author`** (the recon→write→verify→install loop). See
+out — **`web-agent`** (connect + tool surface + common tasks) and
+**`web-adapter-author`** (the recon→write→verify→install loop). See
 [`skills/README.md`](./skills/README.md) to install. The extension's **外部接入** page has
 the same 3-step quick start.
 
@@ -64,5 +64,5 @@ to this daemon's WebSocket and registers; the daemon routes calls to it.
 - extension → `{type:'result', id, ok, result?, error?}`.
 
 `explore_start` / `explore_stop` are synthetic control tools (handled in the extension,
-not registry adapters). Design notes live in the WebChat Agent extension repo
+not registry adapters). Design notes live in the Web Agent extension repo
 (`docs/external-agent-control.md`).
