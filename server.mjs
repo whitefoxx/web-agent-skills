@@ -89,7 +89,7 @@ const SYNTHETIC = [
   {
     name: 'load_adapter',
     description:
-      'Temporarily load a marketplace adapter into THIS session (no install, gone on restart): fetch + sha256-verify + register, then `<site>__<name>` is callable like an installed tool (it appears in tools/list after this). Use find_adapters to get site/name. Prefer this over install_adapter for one-off use — installed adapters sit in the tool list on every request (tokens); install only the high-frequency ones. Returns the adapter args. Loading needs no confirm; a WRITE adapter confirms when it runs.',
+      'Load a marketplace adapter into THIS session (on demand, gone on restart): fetch + sha256-verify + register, then `<site>__<name>` is callable and shows up in tools/list. This is the ONLY way to use a marketplace adapter — there is no install; just `find_adapters` → `load_adapter` each task (nothing persists, so it never sits in the tool list burning tokens). Use find_adapters to get site/name. Returns the adapter args. Loading needs no confirm; a WRITE adapter confirms when it runs.',
     inputSchema: {
       type: 'object',
       properties: {
@@ -102,64 +102,36 @@ const SYNTHETIC = [
   {
     name: 'contribute_adapter',
     description:
-      "Contribute an INSTALLED adapter back to the public marketplace: returns a pre-filled GitHub issue URL containing the adapter's source for the maintainer to audit + merge (+ rotate sha). Use after you authored or healed an adapter and it works. Show the returned `url` to the user — they review + submit on GitHub (privacy: it carries only the source, no scraped data). If `pasteSource` is returned, the source was too long to inline — give it to the user to paste into the issue.",
+      "Contribute a locally-synthesized (explore) adapter back to the public marketplace: returns a pre-filled GitHub issue URL containing the adapter's source for the maintainer to audit + merge (+ rotate sha). Use after you authored or healed an adapter and it works. Show the returned `url` to the user — they review + submit on GitHub (privacy: it carries only the source, no scraped data). If `pasteSource` is returned, the source was too long to inline — give it to the user to paste into the issue.",
     inputSchema: {
       type: 'object',
       properties: {
-        site: { type: 'string', description: 'installed adapter site' },
-        name: { type: 'string', description: 'installed adapter name' },
+        site: { type: 'string', description: 'synthesized adapter site' },
+        name: { type: 'string', description: 'synthesized adapter name' },
       },
       required: ['site', 'name'],
     },
   },
   // ── in-extension operations (handled in the extension, not registry adapters) ──
-  {
-    name: 'create_workflow',
-    description:
-      'Save a reusable workflow (a named chain of tool calls) into the extension. Re-using a name updates it. Later steps may reference earlier results via {{N.field}} / {{prev}}; set for_each to a context path to fan out (use {{item.field}}).',
-    inputSchema: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', description: 'workflow name (re-use to update)' },
-        description: { type: 'string', description: 'one-line summary shown to the user' },
-        steps: {
-          type: 'array',
-          description: 'ordered steps',
-          items: {
-            type: 'object',
-            properties: {
-              tool: { type: 'string', description: 'tool id, e.g. hackernews__top' },
-              args: { type: 'object', description: 'arg key/values; may use {{...}} templates' },
-              for_each: { type: 'string', description: 'optional: context path to iterate' },
-            },
-            required: ['tool'],
-          },
-        },
-      },
-      required: ['name', 'description', 'steps'],
-    },
-  },
-  {
-    name: 'list_workflows',
-    description: 'List saved workflows (name, description, tool chain).',
-    inputSchema: { type: 'object', properties: {} },
-  },
+  // NB: the rigid workflow-pipeline (create_workflow with steps/{{N.field}}/for_each)
+  // was removed 2026-07-09 — a 工作流 is now a reusable PROMPT RECIPE, saved via
+  // create_shortcut below (the extension calls it a 工作流 in the UI).
   {
     name: 'create_shortcut',
     description:
-      'Save a reusable prompt shortcut the user can insert with /. Re-using a label updates it. Text may embed ⟦wf:NAME⟧ / ⟦tool:ID⟧ tokens to carry a workflow/tool.',
+      'Save a reusable 工作流 (a prompt RECIPE — natural-language instructions the user inserts with /, describing a whole flow: what to do, which tools/adapters to call, how to post-process). Re-using a label updates it. The text may embed ⟦tool:ID⟧ tokens to reference a specific tool/adapter. (This is the extension\'s "工作流"; there is no separate rigid pipeline anymore.)',
     inputSchema: {
       type: 'object',
       properties: {
         label: { type: 'string', description: 'short name (user searches it with /)' },
-        text: { type: 'string', description: 'the prompt text' },
+        text: { type: 'string', description: 'the prompt recipe text (may embed ⟦tool:ID⟧)' },
       },
       required: ['label', 'text'],
     },
   },
   {
     name: 'list_shortcuts',
-    description: 'List saved shortcuts (label + text/tool).',
+    description: 'List saved 工作流 / prompt recipes (label + text).',
     inputSchema: { type: 'object', properties: {} },
   },
   {
@@ -287,15 +259,15 @@ function buildGuide(connected, skillVer) {
   L.push(`- 工具:${syntheticAsOpenAi().length} 个控制工具 + ${catalog.length} 个来自扩展。`);
   L.push(
     siteAdapters.length
-      ? `- 已装站点 adapter(${siteAdapters.length}):${siteAdapters.slice(0, 40).join(', ')}${siteAdapters.length > 40 ? ' …' : ''}。`
-      : '- 暂无已装站点 adapter —— 用 `find_adapters` 找、`load_adapter` 临时加载(一次性)或 `install_adapter` 安装。',
+      ? `- 已加载/可用站点 adapter(${siteAdapters.length}):${siteAdapters.slice(0, 40).join(', ')}${siteAdapters.length > 40 ? ' …' : ''}。`
+      : '- 暂无已加载的站点 adapter —— 用 `find_adapters` 找、`load_adapter` 加载即可用(无需安装,按需加载)。',
   );
   L.push('', '## 怎么驱动');
   L.push(
     `- 所有工具走 HTTP:\`curl -s http://127.0.0.1:${PORT}/command -d '{"tool":"<名>","args":{...}}'\`(返回 {ok,result})。`,
     '- 随时列全部工具:`GET /tools`;本指南(含当前状态):`GET /guide`。',
     '- 通用工具:open_url / get_page_text(可 format:"markdown")/ get_interactives / click / type_into / scroll_page …;写操作会弹用户确认。',
-    '- 没有现成 adapter?`find_adapters "<站点/任务>"`(支持中英别名)→ `load_adapter` 或 `install_adapter`。',
+    '- 没有现成 adapter?`find_adapters "<站点/任务>"`(支持中英别名)→ `load_adapter` 加载即用(无需安装)。',
     '- 造新 adapter:`explore_start` → 感知工具(get_a11y_tree / find_structured_data / eval_js / find_in_dom …)探明数据源 → 合成 → `explore_stop`。',
     '- 卡在登录/验证码:相关工具会让扩展弹「接手」卡给用户;等他完成再续。',
   );
@@ -432,11 +404,11 @@ const SERVER_INFO = [
   '   `load_adapter {site, name}` (ephemeral, token-cheap) → call `<site>__<name>`.',
   '3. No adapter for the task? Author one — use the `author-adapter` prompt, or',
   '   `explore_start` then the perception tools (get_a11y_tree, find_structured_data,',
-  '   read_network, eval_js, …) to find the data source, then write + install a',
+  '   read_network, eval_js, …) to find the data source, then synthesize a',
   '   deterministic adapter. A good adapter beats slow generic clicking.',
   '4. Anything without an adapter: generic primitives — open_url, get_interactives,',
   '   click, click_by_text, type_into, scroll_page, screenshot, eval_js, query_dom.',
-  '5. The extension also exposes the user\'s workflows, shortcuts, notes, and memory.',
+  "5. The extension also exposes the user's 工作流 (prompt recipes), notes, and memory.",
   '',
   '## Authoring discipline (also in the web-adapter-author skill)',
   'Pick the most stable data source, in this order:',

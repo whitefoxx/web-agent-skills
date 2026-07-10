@@ -1,6 +1,6 @@
 ---
 name: web-agent
-description: Use to drive the user's real, logged-in Chrome through the Web Agent browser extension — open pages, read/extract content, click/type/scroll, manage tabs, run installed site adapters, author new adapters via explore, and manage the extension itself (workflows, shortcuts, long-term memory, LLM model). Covers starting the local bridge yourself and talking to it over plain HTTP (curl) — no MCP setup needed. Reach for this on any "use my browser", "read this site while I'm logged in", "scrape/automate this page", "make a tool for site X", or "save this as a workflow/shortcut/memory" request.
+description: Use to drive the user's real, logged-in Chrome through the Web Agent browser extension — open pages, read/extract content, click/type/scroll, manage tabs, load + run site adapters on demand, author new adapters via explore, and manage the extension itself (工作流/prompt recipes, long-term memory, LLM model). Covers starting the local bridge yourself and talking to it over plain HTTP (curl) — no MCP setup needed. Reach for this on any "use my browser", "read this site while I'm logged in", "scrape/automate this page", "make a tool for site X", or "save this as a 工作流/memory" request.
 ---
 
 # web-agent
@@ -8,8 +8,8 @@ description: Use to drive the user's real, logged-in Chrome through the Web Agen
 **The user's logged-in browser, as your tools.** Drive the user's real, logged-in
 Chrome through the **Web Agent** extension — locally, over plain HTTP (`curl`),
 no MCP setup required. Deterministic site adapters + their real sessions (no re-auth),
-local-first. Read/extract pages, click/type/scroll, run installed site adapters, author
-new ones (explore), and manage the extension (workflows / shortcuts / memory / LLM).
+local-first. Read/extract pages, click/type/scroll, load + run site adapters on demand,
+author new ones (explore), and manage the extension (工作流 / prompt recipes / memory / LLM).
 
 > **This file is a thin bootstrap — the live truth is `/guide`.** Once the bridge is up
 > (§1), **run this first and follow it.** It reports the CURRENT state (connection, which

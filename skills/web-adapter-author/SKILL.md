@@ -62,8 +62,10 @@ pipeline | func })`:
      `location.pathname`); never hardcode a specific id.
 7. **Verify** — re-run `eval_js` (or the pipeline's `evaluate`) and confirm the
    output matches what you observed: row count in range + key fields non-empty.
-8. **Install** — paste the source into the extension → **Adapters → 粘贴安装**
-   (the install path eval's + registers it). Then `explore_stop`.
+8. **Finish** — `synthesize_adapter` already registered + persisted the adapter
+   (it appears under **Adapters → 探索生成**); there is no separate install step.
+   Then `explore_stop`. To submit it to the public marketplace, use
+   `contribute_adapter` (opens a pre-filled GitHub issue with the source).
 
 ## Gotchas
 
