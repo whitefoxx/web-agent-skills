@@ -407,7 +407,7 @@ const SERVER_INFO = [
   '   read_network, eval_js, …) to find the data source, then synthesize a',
   '   deterministic adapter. A good adapter beats slow generic clicking.',
   '4. Anything without an adapter: generic primitives — open_url, get_interactives,',
-  '   click, click_by_text, type_into, scroll_page, screenshot, eval_js, query_dom.',
+  '   click (ref|selector|text), type_into, scroll_page, screenshot, eval_js, query_dom.',
   "5. The extension also exposes the user's 工作流 (prompt recipes), notes, and memory.",
   '',
   '## Authoring discipline (also in the web-adapter-author skill)',
@@ -475,7 +475,7 @@ function promptText(name, args) {
     return [
       "Summarize the user's open browser tabs.",
       '1. list_tabs to see what is open.',
-      '2. For each relevant tab, get_text_from_tab (or get_page_text) to read it.',
+      '2. For each relevant tab, get_page_text (tab_id=…) to read it.',
       '3. Give a concise per-tab summary, grouped by topic.',
     ].join('\n');
   }
